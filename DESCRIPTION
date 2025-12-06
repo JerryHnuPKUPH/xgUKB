@@ -1,0 +1,20 @@
+Package: xgUKB
+Title: Efficient Tools for UK Biobank Data Analysis
+Version: 0.1.0
+Authors@R: person("Your", "Name", email = "your@email.com", role = c("aut", "cre"))
+Description: A comprehensive toolkit for handling UK Biobank data, providing functions for 
+    variable dictionary searching, automated data extraction and merging, and ICD-10 based 
+    disease definition. Designed to simplify the preprocessing workflow for UKB researchers.
+License: MIT + file LICENSE
+Encoding: UTF-8
+LazyData: true
+RoxygenNote: 7.3.3
+Imports: 
+    dplyr,
+    stringr,
+    tidyr,
+    readr,
+    data.table,
+    magrittr
+Depends: 
+    R (>= 3.5.0)
