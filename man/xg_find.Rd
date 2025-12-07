@@ -2,31 +2,28 @@
 % Please edit documentation in R/dict_utils.R, R/xg_find.R
 \name{xg_find}
 \alias{xg_find}
-\title{搜索变量字典 (Search Variable Dictionary)}
+\title{Search Variable Dictionary}
 \usage{
-xg_find(keyword, data = ukb_dict_mini)
+xg_find(keyword, dict = ukb_dict_mini)
 
-xg_find(keyword, data = ukb_dict_mini)
+xg_find(keyword, dict = ukb_dict_mini)
 }
 \arguments{
-\item{keyword}{A string to search for (e.g., "BMI", "21001", "YTHDF3").}
+\item{keyword}{A character vector or string to search (e.g., "BMI" or c("BMI", "Age")).}
 
-\item{data}{The dictionary data frame to search in. Default is `ukb_dict_mini`.}
+\item{dict}{The dictionary data to search in (default: ukb_dict_mini).}
 
-\item{keywords}{一个或多个字符串关键词 (如 c("sex", "age"))。支持中文或英文（取决于字典内容）。}
+\item{keywords}{One or more character string keywords (e.g., c("sex", "age")). Supports Chinese or English (depending on the content of the dictionary).}
 
-\item{view}{逻辑值，是否在 View 窗口中展示结果。默认为 TRUE。}
+\item{view}{Logical. Whether to display the results in the View window. Defaults to TRUE.}
 }
 \value{
-返回包含 FieldID, Description 等信息的 data.frame
+Returns a data.frame containing information such as FieldID, Description, etc.
 
-A data.table or data.frame containing matching rows.
+A data frame containing the matching rows.
 }
 \description{
-根据关键词模糊搜索 UK Biobank 变量字典，无需打开网页版 Showcase。
-
-This function searches across multiple columns (Name, Description, FieldID, Entity)
-to find relevant variables. It is case-insensitive.
+Fuzzy search the UK Biobank variable dictionary based on keywords, eliminating the need to open the web-based Showcase.
 }
 \examples{
 \dontrun{

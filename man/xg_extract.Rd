@@ -2,7 +2,7 @@
 % Please edit documentation in R/core_functions.R, R/xg_extract.R
 \name{xg_extract}
 \alias{xg_extract}
-\title{快速读取并清洗 UKB 数据 (Quick Load & Clean)}
+\title{Quick Load & Clean UKB Data}
 \usage{
 xg_extract(data, field_ids, instance = NULL)
 
@@ -16,15 +16,15 @@ xg_extract(data, field_ids, instance = NULL)
 \item{instance}{A vector of instance indexes to extract (e.g., 0, 1, or c(0,2)). 
 Default is NULL (extracts ALL instances).}
 
-\item{file_path}{本地 UKB 数据文件路径 (.csv, .tab, .txt)。}
+\item{file_path}{Local path to UKB data file (.csv, .tab, .txt).}
 
-\item{eid_col}{主键列名，默认为 "f.eid"。}
+\item{eid_col}{Primary key column name, defaults to "f.eid".}
 }
 \value{
-清洗后的 data.frame (tibble)
+Cleaned data.frame (tibble)
 
 A data.table containing columns that match the field IDs and instances.
 }
 \description{
-从大型 CSV/Tab 文件中提取指定变量，并自动整理格式。
+Extracts specified variables from large CSV/Tab files and automatically formats the data.
 }

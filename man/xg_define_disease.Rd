@@ -2,20 +2,20 @@
 % Please edit documentation in R/icd_utils.R
 \name{xg_define_disease}
 \alias{xg_define_disease}
-\title{基于 ICD-10 定义疾病 (Define Disease by ICD-10)}
+\title{Define Disease by ICD-10}
 \usage{
 xg_define_disease(df, icd_codes, strict = FALSE)
 }
 \arguments{
-\item{df}{已加载的数据框 (必须包含 f.41270 系列列)。}
+\item{df}{Loaded data frame (must contain f.41270 series columns).}
 
-\item{icd_codes}{字符串向量，如 c("I20", "I25")。}
+\item{icd_codes}{Character vector, e.g., c("I20", "I25").}
 
-\item{strict}{逻辑值。TRUE=精确匹配, FALSE=前缀匹配(默认)。}
+\item{strict}{Logical. TRUE = exact match, FALSE = prefix match (default).}
 }
 \value{
-返回一个由 0/1 组成的向量，1表示患病。
+Returns a vector consisting of 0s and 1s, where 1 indicates the presence of the disease.
 }
 \description{
-输入 ICD 前缀，自动从主诊断和副诊断列 (f.41270) 中筛选确诊患者。
+Takes ICD prefixes as input and automatically identifies diagnosed patients from the main and secondary diagnosis columns (f.41270).
 }

@@ -2,18 +2,18 @@
 % Please edit documentation in R/dict_utils.R
 \name{xg_get_cols}
 \alias{xg_get_cols}
-\title{获取指定 Field ID 的完整列名}
+\title{Get Complete Column Names for a Specific Field ID}
 \usage{
 xg_get_cols(field_id, data_cols)
 }
 \arguments{
-\item{field_id}{字符串或数字}
+\item{field_id}{Character or numeric.}
 
-\item{data_cols}{数据集的所有列名向量}
+\item{data_cols}{A vector containing all column names of the dataset.}
 }
 \value{
-匹配到的列名向量
+A vector of matched column names.
 }
 \description{
-输入 Field ID (如 "21001")，返回数据集中实际的列名 (如 "f.21001.0.0")
+Takes a Field ID (e.g., "21001") as input and returns the actual column names from the dataset (e.g., "f.21001.0.0").
 }

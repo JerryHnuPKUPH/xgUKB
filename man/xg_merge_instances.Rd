@@ -2,18 +2,19 @@
 % Please edit documentation in R/core_functions.R
 \name{xg_merge_instances}
 \alias{xg_merge_instances}
-\title{自动合并基线与随访数据 (Auto Merge Instances)}
+\title{Auto-Merge Baseline & Follow-up Data}
 \usage{
 xg_merge_instances(df, field_id, method = "first")
 }
 \arguments{
-\item{df}{数据框}
+\item{df}{Input data frame}
 
-\item{field_id}{目标 Field ID}
+\item{field_id}{Target Field ID}
 
-\item{method}{合并方式: "first" (优先取基线，缺失则取随访), "mean" (取均值)}
+\item{method}{Merge method: "first" (prioritize baseline, use follow-up if missing) or "mean" (row average)}
 }
 \description{
-将 f.xxxx.0.0 (基线), f.xxxx.1.0 (第一次随访) 等合并为一列，或取均值。
-该逻辑模拟 ukhelp 的自动清洗。
+Merges instances (e.g., f.xxxx.0.0 [baseline], f.xxxx.1.0 [first follow-up])
+into single columns using either first non-NA value or row means.
+Mimics ukhelp's auto-cleaning logic.
 }
