@@ -10,11 +10,11 @@ Encoding: UTF-8
 LazyData: true
 RoxygenNote: 7.3.3
 Imports: 
-    dplyr,
     stringr,
     tidyr,
     readr,
     data.table,
     magrittr
 Depends: 
+    dplyr,
     R (>= 3.5.0)
