@@ -2,7 +2,7 @@
 % Please edit documentation in R/xg_rename.R
 \name{xg_rename}
 \alias{xg_rename}
-\title{Rename columns from UKB Field IDs to Descriptions}
+\title{Rename columns from UKB Field IDs to Descriptions with smart conflict resolution}
 \usage{
 xg_rename(data, dict = ukb_dict_mini)
 }
@@ -13,9 +13,7 @@ xg_rename(data, dict = ukb_dict_mini)
 }
 \value{
 The data with renamed columns.
-
-The data with renamed columns.
 }
 \description{
-Rename columns from UKB Field IDs to Descriptions
+Rename columns from UKB Field IDs to Descriptions with smart conflict resolution
 }
