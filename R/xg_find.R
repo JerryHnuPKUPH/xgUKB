@@ -1,65 +1,50 @@
-#' Search for fields in the UKB dictionary
+#' Search for keywords in the dictionary
 #'
-#' This function searches across multiple columns (Name, Description, FieldID, Entity)
-#' to find relevant variables. It is case-insensitive.
-#'
-#' @param keyword A string to search for (e.g., "BMI", "21001", "YTHDF3").
-#' @param data The dictionary data frame to search in. Default is `ukb_dict_mini`.
-#' @return A data.table or data.frame containing matching rows.
+#' @param keyword A character vector or string to search (e.g., "BMI" or c("BMI", "Age")).
+#' @param dict The dictionary data to search in (default: ukb_dict_mini).
+#' @return A data frame containing the matching rows.
 #' @export
-xg_find <- function(keyword, data = ukb_dict_mini) {
-  # 1. 输入检查
-  if (missing(keyword) || is.null(keyword) || keyword == "") {
-    stop("Please provide a keyword to search (e.g., xg_find('BMI')).")
+xg_find <- function(keyword, dict = ukb_dict_mini) {
+  
+  # 1. 检查 keyword 参数是否有效
+  if (missing(keyword) || is.null(keyword) || length(keyword) == 0) {
+    stop("Please provide a keyword to search.")
   }
   
-  if (!exists("ukb_dict_mini") && missing(data)) {
-    stop("Data dictionary 'ukb_dict_mini' not found. Please load it first.")
+  # 过滤掉空字符串，防止搜出所有东西
+  keyword <- keyword[keyword != ""]
+  if (length(keyword) == 0) {
+    stop("Keywords contain only empty strings.")
   }
   
-  # 转换 keyword 为字符，防止传入数字报错
-  pattern <- as.character(keyword)
-  
-  message(paste0(">>> Searching for '", pattern, "' in dictionary..."))
-  
-  # 2. 定义我们要搜索的“核心列”
-  # 我们希望在这些列里只要有一个匹配上就算成功
-  search_cols <- c("Name", "FieldID", "Description", "Entity", "Type")
-  
-  # 确保这些列在数据中真的存在
-  valid_cols <- intersect(names(data), search_cols)
-  
-  if (length(valid_cols) == 0) {
+  # 2. 检查字典格式
+  required_cols <- c("Name", "Description", "FieldID")
+  if (!all(required_cols %in% names(dict))) {
     stop("The dictionary data does not have standard columns (Name, Description, FieldID).")
   }
   
-  # 3. 执行全字段搜索
-  # 初始化一个全为 FALSE 的向量
-  matches <- rep(FALSE, nrow(data))
+  # 3. 构建多词搜索逻辑
+  # 将 c("BMI", "center") 转换为正则表达式 "BMI|center"
+  # | 代表“或者”，意思是只要匹配其中任何一个词就把它找出来
+  search_pattern <- paste(keyword, collapse = "|")
   
-  for (col in valid_cols) {
-    # 将该列转换为字符（处理 FieldID 为数字的情况，或 NA 的情况）
-    col_values <- as.character(data[[col]])
-    
-    # 查找匹配 (ignore.case = TRUE 是关键，能匹配 ythdf3 和 YTHDF3)
-    # 使用 grepl 返回逻辑向量
-    found_in_col <- grepl(pattern, col_values, ignore.case = TRUE)
-    
-    # 逻辑或 (OR)：只要之前的列匹配了，或者这一列匹配了，都算
-    matches <- matches | found_in_col
-  }
+  message(paste0(">>> Searching for patterns: '", search_pattern, "'"))
   
-  # 4. 提取结果
-  result <- data[matches, ]
+  # 4. 执行搜索 (不区分大小写)
+  # 在 Description 中搜索 OR 在 FieldID 中搜索
+  matches_desc <- grep(search_pattern, dict$Description, ignore.case = TRUE)
+  matches_id   <- grep(search_pattern, as.character(dict$FieldID), ignore.case = TRUE)
   
-  # 5. 结果反馈
+  # 取并集 (unique)
+  match_indices <- unique(c(matches_desc, matches_id))
+  
+  # 5. 返回结果
+  result <- dict[match_indices, ]
+  
   if (nrow(result) == 0) {
-    message("No matches found.")
+    message("No results found.")
     return(NULL)
-  } else {
-    message(paste(">>> Found", nrow(result), "matches."))
-    # 移除行名，让显示更整洁
-    rownames(result) <- NULL
-    return(result)
   }
+  
+  return(result)
 }
