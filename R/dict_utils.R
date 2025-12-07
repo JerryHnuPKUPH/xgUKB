@@ -1,10 +1,10 @@
-#' 搜索变量字典 (Search Variable Dictionary)
+#' Search Variable Dictionary
 #'
-#' 根据关键词模糊搜索 UK Biobank 变量字典，无需打开网页版 Showcase。
+#' Fuzzy search the UK Biobank variable dictionary based on keywords, eliminating the need to open the web-based Showcase.
 #'
-#' @param keywords 一个或多个字符串关键词 (如 c("sex", "age"))。支持中文或英文（取决于字典内容）。
-#' @param view 逻辑值，是否在 View 窗口中展示结果。默认为 TRUE。
-#' @return 返回包含 FieldID, Description 等信息的 data.frame
+#' @param keywords One or more character string keywords (e.g., c("sex", "age")). Supports Chinese or English (depending on the content of the dictionary).
+#' @param view Logical. Whether to display the results in the View window. Defaults to TRUE.
+#' @return Returns a data.frame containing information such as FieldID, Description, etc.
 #' @export
 #' @examples
 #' \dontrun{
@@ -12,19 +12,19 @@
 #' xg_find(c("血压", "blood pressure"))
 #' }
 xg_find <- function(keywords, view = TRUE) {
-  # 检查是否有内置字典
+  # Check if the built-in dictionary exists
   if (!exists("ukb_dict_mini")) {
-    stop("Error: 未找到内置字典 `ukb_dict_mini`。请确保包已正确加载。")
+    stop("Error: Built-in dictionary `ukb_dict_mini` not found. Please ensure the package is correctly loaded.")
   }
   
-  # 拼接正则模式 (Case-insensitive)
+  # Construct regex pattern (Case-insensitive)
   pattern <- paste(keywords, collapse = "|")
   
   res <- ukb_dict_mini %>%
     dplyr::filter(stringr::str_detect(Description, stringr::regex(pattern, ignore_case = TRUE)) | 
-                  stringr::str_detect(FieldID, pattern))
+                    stringr::str_detect(FieldID, pattern))
   
-  message(paste0(">>> 共找到 ", nrow(res), " 个相关变量。"))
+  message(paste0(">>> Found ", nrow(res), " matching variables."))
   
   if (view) {
     View(res)
@@ -32,12 +32,12 @@ xg_find <- function(keywords, view = TRUE) {
   return(res)
 }
 
-#' 获取指定 Field ID 的完整列名
+#' Get Complete Column Names for a Specific Field ID
 #'
-#' 输入 Field ID (如 "21001")，返回数据集中实际的列名 (如 "f.21001.0.0")
-#' @param field_id 字符串或数字
-#' @param data_cols 数据集的所有列名向量
-#' @return 匹配到的列名向量
+#' Takes a Field ID (e.g., "21001") as input and returns the actual column names from the dataset (e.g., "f.21001.0.0").
+#' @param field_id Character or numeric.
+#' @param data_cols A vector containing all column names of the dataset.
+#' @return A vector of matched column names.
 #' @export
 xg_get_cols <- function(field_id, data_cols) {
   pattern <- paste0("^f\\.", field_id, "\\.")

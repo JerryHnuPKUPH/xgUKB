@@ -1,40 +1,40 @@
-#' 基于 ICD-10 定义疾病 (Define Disease by ICD-10)
+#' Define Disease by ICD-10
 #'
-#' 输入 ICD 前缀，自动从主诊断和副诊断列 (f.41270) 中筛选确诊患者。
+#' Takes ICD prefixes as input and automatically identifies diagnosed patients from the main and secondary diagnosis columns (f.41270).
 #'
-#' @param df 已加载的数据框 (必须包含 f.41270 系列列)。
-#' @param icd_codes 字符串向量，如 c("I20", "I25")。
-#' @param strict 逻辑值。TRUE=精确匹配, FALSE=前缀匹配(默认)。
-#' @return 返回一个由 0/1 组成的向量，1表示患病。
+#' @param df Loaded data frame (must contain f.41270 series columns).
+#' @param icd_codes Character vector, e.g., c("I20", "I25").
+#' @param strict Logical. TRUE = exact match, FALSE = prefix match (default).
+#' @return Returns a vector consisting of 0s and 1s, where 1 indicates the presence of the disease.
 #' @export
 xg_define_disease <- function(df, icd_codes, strict = FALSE) {
-  # 找到所有 ICD10 诊断列 (f.41270.x.x)
+  # Find all ICD-10 diagnosis columns (f.41270.x.x)
   icd_cols <- grep("^f\\.41270\\.", names(df), value = TRUE)
   
   if (length(icd_cols) == 0) {
-    stop("Error: 数据框中未找到 f.41270 (ICD-10 Diagnoses) 相关列。")
+    stop("Error: Relevant columns for f.41270 (ICD-10 Diagnoses) were not found in the data frame.")
   }
   
-  message(">>> 正在扫描 ICD-10 记录...")
+  message(">>> Scanning ICD-10 records...")
   
-  # 将数据转为长格式以便搜索 (这种方式比对每一列做 grep 更稳健)
-  # 注意：大数据量下这步可能较慢，这里采用简化的 apply 逻辑
+  # Convert data to long format implies searching across columns (this is more robust than grepping each column individually)
+  # Note: This step might be slow with large datasets; using simplified apply logic here
   
-  # 创建一个正则模式
+  # Create a regex pattern
   if (strict) {
     pattern <- paste0("^(", paste(icd_codes, collapse = "|"), ")$")
   } else {
-    # 前缀匹配，如 I25 会匹配 I25.1, I25.9
+    # Prefix match, e.g., I25 will match I25.1, I25.9
     pattern <- paste0("^(", paste(icd_codes, collapse = "|"))
   }
   
-  # 定义一个内部函数：判断一行是否包含 pattern
+  # Define an internal function: check if a row contains the pattern
   check_row <- function(row_data) {
     any(stringr::str_detect(na.omit(as.character(row_data)), pattern))
   }
   
-  # 对 ICD 列进行行遍历
-  # 这里的 df[icd_cols] 需要是 data.frame 或 matrix
+  # Iterate over rows for ICD columns
+  # Here df[icd_cols] needs to be a data.frame or matrix
   has_disease <- apply(df[, icd_cols], 1, check_row)
   
   return(as.integer(has_disease))

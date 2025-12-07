@@ -7,12 +7,12 @@
 #' @return A data.table containing columns that match the field IDs and instances.
 #' @export
 xg_extract <- function(data, field_ids, instance = NULL) {
-  # 依赖检查
+  # Dependency check
   if (!requireNamespace("data.table", quietly = TRUE)) {
     stop("Package 'data.table' is required. Please install it.")
   }
   
-  # --- 步骤 1: 获取表头 ---
+  # --- Step 1: Get Header ---
   if (is.character(data)) {
     if (!file.exists(data)) stop("File not found: ", data)
     header <- names(data.table::fread(data, nrows = 0))
@@ -26,26 +26,26 @@ xg_extract <- function(data, field_ids, instance = NULL) {
   
   message(">>> Scanning header...")
   
-  # --- 步骤 2: 构建匹配逻辑 ---
+  # --- Step 2: Build Matching Logic ---
   target_cols <- c()
   
-  # 1. 总是自动抓取 'eid'
+  # 1. Always automatically extract 'eid'
   eid_match <- grep("^eid$|^EID$", header, value = TRUE)
   if (length(eid_match) > 0) target_cols <- c(target_cols, eid_match)
   
-  # 2. 遍历 Field IDs
+  # 2. Iterate through Field IDs
   for (id in field_ids) {
     if (tolower(id) == "eid") next
     
-    # 清洗 ID，只保留数字
+    # Clean ID, keep numbers only
     clean_id <- gsub("[^0-9]", "", id)
     if (nchar(clean_id) == 0) next
     
-    # 基础正则：匹配该 ID 的所有列
-    # 兼容三种格式: p3_XX, f.3.XX, 3-XX
+    # Base regex: match all columns for this ID
+    # Compatible with three formats: p3_XX, f.3.XX, 3-XX
     base_pattern <- paste0("^p", clean_id, "_|^f\\.", clean_id, "\\.|^", clean_id, "-")
     
-    # 初步筛选出所有属于该 ID 的列（包含所有 instance）
+    # Preliminarily filter all columns belonging to this ID (including all instances)
     candidates <- grep(base_pattern, header, value = TRUE)
     
     if (length(candidates) == 0) {
@@ -53,28 +53,28 @@ xg_extract <- function(data, field_ids, instance = NULL) {
       next
     }
     
-    # --- 步骤 3: Instance 过滤 ---
+    # --- Step 3: Instance Filtering ---
     if (is.null(instance)) {
-      # 如果没指定 instance，全都要
+      # If instance is not specified, keep all candidates
       target_cols <- c(target_cols, candidates)
     } else {
-      # 如果指定了 instance (例如 0)，只筛选对应的列
-      # 构建 instance 的正则片段
-      # 针对 p3_i0 格式: "_i0"
-      # 针对 f.3.0.0 格式: ".0." (注意 f.{id}.{instance}.{array})
-      # 针对 3-0.0 格式: "-0."
+      # If instance is specified (e.g., 0), filter only corresponding columns
+      # Construct regex fragments for instances
+      # For format p3_i0: "_i0"
+      # For format f.3.0.0: ".0." (Note: f.{id}.{instance}.{array})
+      # For format 3-0.0: "-0."
       
       matches_instance <- c()
       
       for (inst in instance) {
-        # 兼容三种不同格式的 instance 标记
+        # Compatible with three different instance marker formats
         inst_patterns <- paste0(
           "_", "i", inst, "($|_|a)", "|",  # match p3_i0, p3_i0_a1
           "\\.", inst, "\\.",        "|",  # match f.3.0.0
           "-", inst, "\\."                 # match 3-0.0
         )
         
-        # 在 candidates 中进一步筛选匹配该 instance 的列
+        # Further filter columns in candidates that match this instance
         found <- grep(inst_patterns, candidates, value = TRUE)
         matches_instance <- c(matches_instance, found)
       }
@@ -87,13 +87,13 @@ xg_extract <- function(data, field_ids, instance = NULL) {
   
   if (length(target_cols) <= length(eid_match)) {
     warning("No data columns found to extract (check your IDs or Instance numbers).")
-    # 如果只找到 eid 或者啥都没找到，可能不想报错而是返回空结果或者只有eid
+    # If only eid is found or nothing is found, allow valid return (NULL) rather than error
     if(length(target_cols) == 0 && length(eid_match) == 0) return(NULL)
   }
   
   message(paste(">>> Identifying", length(target_cols), "columns..."))
   
-  # --- 步骤 4: 提取 ---
+  # --- Step 4: Extraction ---
   if (is_file_path) {
     return(data.table::fread(data, select = target_cols))
   } else {
