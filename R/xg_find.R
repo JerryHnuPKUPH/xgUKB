@@ -18,7 +18,7 @@ xg_find <- function(keyword, dict = ukb_dict_mini) {
   }
   
   # 2. Check dictionary format
-  required_cols <- c("Name", "Description", "FieldID")
+  required_cols <- c("Name", "Description", "FieldID","Level.1","Level.2","Level.3","Level.4","Level.5")
   if (!all(required_cols %in% names(dict))) {
     stop("The dictionary data does not have standard columns (Name, Description, FieldID).")
   }
