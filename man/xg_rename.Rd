@@ -2,22 +2,27 @@
 % Please edit documentation in R/xg_rename.R
 \name{xg_rename}
 \alias{xg_rename}
-\title{Rename columns from UKB Field IDs to Descriptions with smart suffix handling}
+\title{Rename columns based on UKB Dictionary (Field ID or Name)}
 \usage{
 xg_rename(data, dict = ukb_dict_mini)
 }
 \arguments{
 \item{data}{A data.frame or data.table with raw column names.}
 
-\item{dict}{The dictionary data frame. MUST contain columns 'FieldID' and 'Description'.}
+\item{dict}{The dictionary data frame. MUST contain 'Description'. 
+Should contain 'FieldID' and/or 'Name'.}
 }
 \value{
 The data with renamed columns.
 }
 \description{
-This function renames UK Biobank columns (e.g., "p30600_i0") to human-readable
-descriptions (e.g., "Albumin"). It intelligently handles instances: suffixes
-(_i0) are removed if the variable is unique, but kept if multiple instances exist.
+Rename columns in a dataset using a UKB dictionary. 
+It supports two modes of matching:
+1. **Field ID Matching**: Matches columns like "p30600_i0" to FieldID "30600".
+2. **Name Matching** (Olink style): Matches columns like "il6" to Name "il6".
+
+For Olink data, it extracts the short protein name from the Description 
+(the part before the first semicolon).
 }
 \author{
 Jun Xu <xujun05@pku.edu.cn>

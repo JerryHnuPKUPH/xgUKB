@@ -4,17 +4,17 @@
 \alias{xg_extract}
 \title{Quick Load & Clean UKB Data}
 \usage{
-xg_extract(data, field_ids, instance = NULL)
+xg_extract(file, field_ids, instance = 0)
 
-xg_extract(data, field_ids, instance = NULL)
+xg_extract(file, field_ids, instance = 0)
 }
 \arguments{
-\item{data}{A file path (string) OR a data frame.}
+\item{file}{Path to the UKB data file (csv, txt, tab, etc.).}
 
-\item{field_ids}{A vector of field IDs (e.g., c("3", "20110")).}
+\item{field_ids}{A vector of identifiers. Can be numeric IDs (e.g., c(30600, 30601)) or character Names (e.g., c("a1bg", "BMI")).}
 
-\item{instance}{A vector of instance indexes to extract (e.g., 0, 1, or c(0,2)). 
-Default is NULL (extracts ALL instances).}
+\item{instance}{Numeric vector of instances to extract (e.g., 0, 1, or c(0,1)). 
+Only applies strictly to Numeric Field IDs, or Names with standard suffix patterns.}
 
 \item{file_path}{Local path to UKB data file (.csv, .tab, .txt).}
 
@@ -23,13 +23,18 @@ Default is NULL (extracts ALL instances).}
 \value{
 Cleaned data.frame (tibble)
 
-A data.table containing columns that match the field IDs and instances.
+A data.table containing the EID (subject ID) and the requested columns.
 }
 \description{
 Extracts specified variables from large CSV/Tab files and automatically formats the data.
 
-Extract specific fields from UKB data files
+Efficiently reads a UK Biobank dataset (CSV/Tab-separated) and extracts specific columns.
+It supports two types of extraction identifiers:
+1. **Numeric Field IDs** (e.g., 30600) -> Extracts standard formats like "f.30600.0.0" or "p30600_i0".
+2. **Variable Names** (e.g., "a1bg", "il6") -> Extracts columns matching the name exactly or with instance suffixes.
 }
 \author{
 Xu Jun <xujun05@pku.edu.cn>
+
+Jun Xu <xujun05@pku.edu.cn>
 }

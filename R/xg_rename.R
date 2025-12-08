@@ -1,14 +1,19 @@
-#' Rename columns from UKB Field IDs to Descriptions with smart suffix handling
+#' Rename columns based on UKB Dictionary (Field ID or Name)
 #'
 #' @description
-#' This function renames UK Biobank columns (e.g., "p30600_i0") to human-readable
-#' descriptions (e.g., "Albumin"). It intelligently handles instances: suffixes
-#' (_i0) are removed if the variable is unique, but kept if multiple instances exist.
+#' Rename columns in a dataset using a UKB dictionary. 
+#' It supports two modes of matching:
+#' 1. **Field ID Matching**: Matches columns like "p30600_i0" to FieldID "30600".
+#' 2. **Name Matching** (Olink style): Matches columns like "il6" to Name "il6".
+#' 
+#' For Olink data, it extracts the short protein name from the Description 
+#' (the part before the first semicolon).
 #'
 #' @author Jun Xu <xujun05@pku.edu.cn>
 #'
 #' @param data A data.frame or data.table with raw column names.
-#' @param dict The dictionary data frame. MUST contain columns 'FieldID' and 'Description'.
+#' @param dict The dictionary data frame. MUST contain 'Description'. 
+#'             Should contain 'FieldID' and/or 'Name'.
 #' @return The data with renamed columns.
 #' @export
 xg_rename <- function(data, dict = ukb_dict_mini) {
@@ -17,133 +22,145 @@ xg_rename <- function(data, dict = ukb_dict_mini) {
   if (!requireNamespace("data.table", quietly = TRUE)) stop("Package 'data.table' required.")
   
   # 1. Prepare Dictionary
-  if (is.null(dict$FieldID)) stop("The dictionary provided does not have a 'FieldID' column.")
+  # Clean up dictionary
+  valid_dict <- dict
   
-  # Clean dictionary entries
-  valid_dict <- dict[!is.na(dict$FieldID) & trimws(as.character(dict$FieldID)) != "", ]
-  valid_dict$FieldID <- as.character(valid_dict$FieldID)
+  # Ensure Description exists
+  if (is.null(valid_dict$Description)) stop("Dictionary must have a 'Description' column.")
   
-  # Helper: Clean text for variable names
-  clean_text <- function(x) {
-    if (length(x) == 0) return(character(0))
-    x[is.na(x)] <- ""
-    x <- gsub("[^A-Za-z0-9]", "_", x) # Special chars to underscore
-    x <- gsub("_+", "_", x)           # Reduce multiple underscores
-    x <- gsub("_$", "", x)            # Trim trailing
-    x <- gsub("^_", "", x)            # Trim leading
-    return(x)
-  }
-  
-  valid_dict$CleanDesc <- clean_text(valid_dict$Description)
-  
-  # Handle missing descriptions
-  missing_desc_mask <- is.na(valid_dict$CleanDesc) | valid_dict$CleanDesc == "" | valid_dict$CleanDesc == "NA"
-  if ("Name" %in% names(valid_dict)) {
-    fallback_names <- valid_dict$Name[missing_desc_mask]
-    fallback_names[is.na(fallback_names)] <- paste0("Field_", valid_dict$FieldID[missing_desc_mask]) 
-    valid_dict$CleanDesc[missing_desc_mask] <- fallback_names
-  } else {
-    valid_dict$CleanDesc[missing_desc_mask] <- paste0("Field_", valid_dict$FieldID[missing_desc_mask])
-  }
-  
-  # Build Lookups
-  # Case 1: Handle duplicate descriptions in dictionary (e.g. different IDs mapping to "Pulse")
-  desc_counts_dict <- table(valid_dict$CleanDesc)
-  duplicate_descs_dict <- names(desc_counts_dict[desc_counts_dict > 1])
-  
-  id_to_desc <- setNames(valid_dict$CleanDesc, valid_dict$FieldID)
-  id_to_varname <- setNames(paste0("p", valid_dict$FieldID), valid_dict$FieldID)
-  
-  # 2. Pre-scan Data to Determine Instance Count
-  current_names <- names(data)
-  
-  # Create a temporary map
-  # Extract numeric ID from each column
-  col_ids <- stringr::str_extract(current_names, "\\d+")
-  # Find what the base description WOUL be for each column
-  potential_descs <- id_to_desc[col_ids]
-  
-  # Filter out non-matches and special columns for the count
-  valid_indices <- !is.na(potential_descs) & !tolower(current_names) %in% c("eid", "subject_id", "id")
-  # Count how many times each Description appears in the INPUT data
-  real_data_desc_counts <- table(potential_descs[valid_indices])
-  
-  # 3. Generate New Names
-  new_names <- sapply(current_names, function(col_name) {
-    # Check Special Columns
-    if (tolower(col_name) %in% c("eid", "subject_id", "id")) return("Subject_ID")
-    
-    col_id <- stringr::str_extract(col_name, "\\d+")
-    
-    # Fail-safe: No ID, keep name
-    if (is.na(col_id)) return(col_name)
-    
-    # Fail-safe: ID not in dictionary, keep name
-    base_desc <- id_to_desc[col_id]
-    if (is.null(base_desc) || is.na(base_desc)) return(col_name)
-    
-    # --- LOGIC START ---
-    
-    # 1. Base Name Resolution (Handle Dictionary Duplicates)
-    if (base_desc %in% duplicate_descs_dict) {
-      final_base <- paste0(base_desc, "_", id_to_varname[col_id])
-    } else {
-      final_base <- base_desc
-    }
-    
-    # 2. Suffix Logic (Handle Instances)
-    occurrence_count <- real_data_desc_counts[base_desc]
-    
-    # Condition: If Description appears > 1 time in data (e.g. _i0 and _i1), KEEP suffix.
-    if (!is.na(occurrence_count) && occurrence_count > 1) {
-      
-      # *** STANDARDIZATION LOGIC (UPDATED) ***
-      # Instead of purely blindly cutting, try to extract standard Instance info
-      
-      # Check if it already looks like standard UKB tool format (pXXXX_i0)
-      if (grepl("_i\\d+", col_name)) {
-        # Ideally extract the '_i0' or '_i0_a0' part
-        extracted_suffix <- stringr::str_extract(col_name, "_i\\d+.*$")
-        final_name <- paste0(final_base, extracted_suffix)
-        
-      } else if (grepl(paste0("\\.", col_id, "\\."), col_name)) {
-        # Handle raw UKB format: f.30600.0.0 -> ID=30600, Inst=0
-        # Extract the number immediately following the ID
-        # Regex explanation: Look for dot, ID, dot, (digits), dot/end
-        inst_match <- stringr::str_match(col_name, paste0("\\.", col_id, "\\.(\\d+)"))
-        if (!is.na(inst_match[1,2])) {
-          inst_num <- inst_match[1,2]
-          final_name <- paste0(final_base, "_i", inst_num) # Enforce _i format
-        } else {
-          # Fallback if structure is weird
-          pattern_remove <- paste0("^[^0-9]*", col_id)
-          suffix <- sub(pattern_remove, "", col_name)
-          final_name <- paste0(final_base, suffix)
-        }
+  # --- HELPER: Logic to extract the "clean" name from Description
+  # Priority: 
+  # 1. If semicolon exists (Olink style "IL6;Interleukin-6"), take part before ';'
+  # 2. Otherwise use full cleaned description
+  get_clean_desc <- function(desc_vec) {
+    sapply(desc_vec, function(x) {
+      if (is.na(x) || x == "") return(NA)
+      # Check for semicolon
+      if (grepl(";", x)) {
+        # Olink style: Extract part before first semicolon
+        clean_val <- trimws(sub(";.*", "", x))
       } else {
-        # Fallback for others (e.g. just raw suffix preservation)
-        pattern_remove <- paste0("^[^0-9]*", col_id)
-        suffix <- sub(pattern_remove, "", col_name)
-        final_name <- paste0(final_base, suffix)
+        # Standard UKB style
+        clean_val <- x
       }
       
-    } else {
-      # Occurs only ONCE -> Clean name (Drop suffix)
-      final_name <- final_base
+      # Clean special chars to underscores
+      clean_val <- gsub("[^A-Za-z0-9]", "_", clean_val)
+      clean_val <- gsub("_+", "_", clean_val)
+      clean_val <- gsub("_$", "", clean_val)
+      clean_val <- gsub("^_", "", clean_val)
+      return(clean_val)
+    })
+  }
+  
+  valid_dict$CleanDesc <- get_clean_desc(valid_dict$Description)
+  
+  # Handle NAs in Description -> Fallback to Name or FieldID
+  missing_mask <- is.na(valid_dict$CleanDesc) | valid_dict$CleanDesc == ""
+  
+  if ("Name" %in% names(valid_dict)) {
+    valid_dict$CleanDesc[missing_mask] <- valid_dict$Name[missing_mask]
+  } else if ("FieldID" %in% names(valid_dict)) {
+    valid_dict$CleanDesc[missing_mask] <- paste0("Field_", valid_dict$FieldID[missing_mask])
+  }
+  
+  # Build Lookup Tables
+  # Map 1: Name -> CleanDesc (For Olink data like 'il6', 'hnrnpk')
+  name_to_desc <- if ("Name" %in% names(valid_dict)) {
+    # Remove rows with empty names and create map
+    tmp <- valid_dict[!is.na(valid_dict$Name) & valid_dict$Name != "", ]
+    setNames(tmp$CleanDesc, tmp$Name)
+  } else {
+    NULL
+  }
+  
+  # Map 2: FieldID -> CleanDesc (For standard UKB data like 'p30600')
+  id_to_desc <- if ("FieldID" %in% names(valid_dict)) {
+    tmp <- valid_dict[!is.na(valid_dict$FieldID), ]
+    # Ensure FieldID is char for matching
+    setNames(tmp$CleanDesc, as.character(tmp$FieldID)) 
+  } else {
+    NULL
+  }
+  
+  # --- INSTANCE COUNT LOGIC ---
+  # To decide whether to keep suffix or not, we need to know the *Target Name* collision count
+  current_names <- names(data)
+  
+  # Step 1: Pre-calculate what each column *wants* to be renamed to
+  target_bases <- sapply(current_names, function(col_name) {
+    if (tolower(col_name) %in% c("eid", "subject_id", "id")) return("Subject_ID")
+    
+    # Strategy A: Exact Name Match (Priority for Olink)
+    # Note: Dictionary Name might be user-provided via input, assume case-sensitive or try both?
+    # Let's try exact match first, then lowercase match
+    if (!is.null(name_to_desc)) {
+      if (col_name %in% names(name_to_desc)) return(name_to_desc[[col_name]])
+      # Try lowercase match if dictionary has names
+      if (tolower(col_name) %in% names(name_to_desc)) return(name_to_desc[[tolower(col_name)]])
     }
     
-    # Final sanity check against NA result
-    if (is.na(final_name) || grepl("^NA_", final_name)) return(col_name)
+    # Strategy B: Field ID Match (Standard UKB)
+    col_id <- stringr::str_extract(col_name, "\\d+")
+    if (!is.na(col_id) && !is.null(id_to_desc)) {
+      if (col_id %in% names(id_to_desc)) return(id_to_desc[[col_id]])
+    }
+    
+    return(NA) # No match found
+  })
+  
+  # Step 2: Count global occurrences of each target Base Name
+  # If "IL6" appears twice (from different raw columns), we must keep suffixes.
+  real_data_desc_counts <- table(target_bases[!is.na(target_bases)])
+  
+  # --- RENAME EXECUTION ---
+  new_names <- sapply(seq_along(current_names), function(i) {
+    col_name <- current_names[i]
+    base_desc <- target_bases[[i]]
+    
+    # 1. Skip if special or no match
+    if (tolower(col_name) %in% c("eid", "subject_id", "id")) return("Subject_ID")
+    if (is.na(base_desc)) return(col_name)
+    
+    # 2. Check collisions
+    # Does this Target Name appear multiple times in this dataset?
+    count <- real_data_desc_counts[[base_desc]]
+    
+    if (!is.na(count) && count > 1) {
+      # COLLISION: Need suffix
+      # Try to find a meaningful suffix
+      
+      # Is there an explicit instance _i0, _i1?
+      if (grepl("_i\\d+", col_name)) {
+        suffix <- stringr::str_extract(col_name, "_i\\d+.*$")
+      } else {
+        # Fallback: Does it look like f.xxxxx.0.0?
+        col_id <- stringr::str_extract(col_name, "\\d+")
+        inst_match <- stringr::str_match(col_name, paste0("\\.", col_id, "\\.(\\d+)"))
+        if (!is.na(inst_match[1,2])) {
+          suffix <- paste0("_i", inst_match[1,2])
+        } else {
+          # Last resort: just whatever is left after removing the matching part?
+          # Hard to define "matching part" for 'Name' match mode.
+          # Simplest safe fallback: append original name to keep unique
+          suffix <- paste0("_", col_name)
+        }
+      }
+      final_name <- paste0(base_desc, suffix)
+    } else {
+      # UNIQUE: Clean name
+      final_name <- base_desc
+    }
     
     return(final_name)
   })
   
-  # 4. Final Safety Check & Apply
+  # 4. Final Safety Check
   dt <- data.table::copy(data)
   
-  # Ensure uniqueness (just in case edge cases remain)
+  # Ensure uniqueness (Duplicate columns protection)
   if (any(duplicated(new_names))) {
-    warning("xg_rename: Some names were still duplicates. Appending unique index.")
+    warning("xg_rename: Duplicate names generated. Appending unique index.")
     new_names <- make.unique(new_names, sep = "_dup")
   }
   
