@@ -4,14 +4,19 @@
 \alias{xg_find}
 \title{Search Variable Dictionary}
 \usage{
-xg_find(keyword, dict = ukb_dict_mini)
+xg_find(keyword, dict = ukb_dict_mini, exclude = NULL)
 
-xg_find(keyword, dict = ukb_dict_mini)
+xg_find(keyword, dict = ukb_dict_mini, exclude = NULL)
 }
 \arguments{
-\item{keyword}{A character vector or string to search (e.g., "BMI" or c("BMI", "Age")).}
+\item{keyword}{A character vector or string to search (e.g., "BMI" or c("BMI", "Age")).
+Matches ANY column (Description, ID, Levels, etc.).}
 
 \item{dict}{The dictionary data to search in (default: ukb_dict_mini).}
+
+\item{exclude}{A character vector or string of keywords to **exclude**. 
+Rows containing these words will be removed from the result.
+Example: exclude = "Instance 1" or exclude = c("Time", "Date").}
 
 \item{keywords}{One or more character string keywords (e.g., c("sex", "age")). Supports Chinese or English (depending on the content of the dictionary).}
 

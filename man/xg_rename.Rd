@@ -2,18 +2,18 @@
 % Please edit documentation in R/xg_rename.R
 \name{xg_rename}
 \alias{xg_rename}
-\title{Rename columns from UKB Field IDs to Descriptions with smart conflict resolution}
+\title{Rename columns from UKB Field IDs to Descriptions with smart suffix handling}
 \usage{
 xg_rename(data, dict = ukb_dict_mini)
 }
 \arguments{
-\item{data}{A data.frame or data.table with raw column names (e.g., p21001_i0).}
+\item{data}{A data.frame or data.table with raw column names.}
 
-\item{dict}{The dictionary data frame (e.g., ukb_dict_mini).}
+\item{dict}{The dictionary data frame. MUST contain columns 'FieldID' and 'Description'.}
 }
 \value{
 The data with renamed columns.
 }
 \description{
-Rename columns from UKB Field IDs to Descriptions with smart conflict resolution
+Rename columns from UKB Field IDs to Descriptions with smart suffix handling
 }
