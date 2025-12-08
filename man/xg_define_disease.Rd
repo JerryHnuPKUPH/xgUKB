@@ -19,3 +19,6 @@ Returns a vector consisting of 0s and 1s, where 1 indicates the presence of the 
 \description{
 Takes ICD prefixes as input and automatically identifies diagnosed patients from the main and secondary diagnosis columns (f.41270).
 }
+\author{
+Xu Jun <xujun05@pku.edu.cn>
+}

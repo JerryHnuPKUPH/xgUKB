@@ -1,7 +1,8 @@
 #' Quick Load & Clean UKB Data
 #'
 #' Extracts specified variables from large CSV/Tab files and automatically formats the data.
-#'
+#' @author Xu Jun <xujun05@pku.edu.cn>
+#' 
 #' @param file_path Local path to UKB data file (.csv, .tab, .txt).
 #' @param field_ids Vector of Field IDs to extract (e.g., c("31", "21001")).
 #' @param eid_col Primary key column name, defaults to "f.eid".

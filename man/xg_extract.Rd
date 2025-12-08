@@ -27,4 +27,9 @@ A data.table containing columns that match the field IDs and instances.
 }
 \description{
 Extracts specified variables from large CSV/Tab files and automatically formats the data.
+
+Extract specific fields from UKB data files
+}
+\author{
+Xu Jun <xujun05@pku.edu.cn>
 }

@@ -29,10 +29,15 @@ A data frame containing the matching rows.
 }
 \description{
 Fuzzy search the UK Biobank variable dictionary based on keywords, eliminating the need to open the web-based Showcase.
+
+Search for keywords from UKB metadata files
 }
 \examples{
 \dontrun{
 xg_find("diabetes")
 xg_find(c("血压", "blood pressure"))
 }
+}
+\author{
+Xu Jun <xujun05@pku.edu.cn>
 }

@@ -1,7 +1,7 @@
 Package: xgUKB
 Title: Efficient Tools for UK Biobank Data Analysis
 Version: 0.1.0
-Authors@R: person("Your", "Name", email = "your@email.com", role = c("aut", "cre"))
+Authors@R: person("Xu", "Jun", email = "xujun@pku.edu.cn", role = c("aut", "cre"))
 Description: A comprehensive toolkit for handling UK Biobank data, providing functions for 
     variable dictionary searching, automated data extraction and merging, and ICD-10 based 
     disease definition. Designed to simplify the preprocessing workflow for UKB researchers.

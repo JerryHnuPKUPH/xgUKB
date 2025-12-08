@@ -15,5 +15,10 @@ xg_rename(data, dict = ukb_dict_mini)
 The data with renamed columns.
 }
 \description{
-Rename columns from UKB Field IDs to Descriptions with smart suffix handling
+This function renames UK Biobank columns (e.g., "p30600_i0") to human-readable
+descriptions (e.g., "Albumin"). It intelligently handles instances: suffixes
+(_i0) are removed if the variable is unique, but kept if multiple instances exist.
+}
+\author{
+Jun Xu <xujun05@pku.edu.cn>
 }

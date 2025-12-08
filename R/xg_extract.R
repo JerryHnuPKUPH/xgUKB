@@ -1,5 +1,7 @@
-#' Extract specific fields from UKB data with instance control
-#'
+#' @title Extract UKB Data
+#' @description Extract specific fields from UKB data files
+#' 
+#' @author Xu Jun <xujun05@pku.edu.cn>
 #' @param data A file path (string) OR a data frame.
 #' @param field_ids A vector of field IDs (e.g., c("3", "20110")).
 #' @param instance A vector of instance indexes to extract (e.g., 0, 1, or c(0,2)). 

@@ -1,6 +1,7 @@
 #' Search Variable Dictionary
 #'
 #' Fuzzy search the UK Biobank variable dictionary based on keywords, eliminating the need to open the web-based Showcase.
+#' @author Xu Jun <xujun05@pku.edu.cn>
 #'
 #' @param keywords One or more character string keywords (e.g., c("sex", "age")). Supports Chinese or English (depending on the content of the dictionary).
 #' @param view Logical. Whether to display the results in the View window. Defaults to TRUE.

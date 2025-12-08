@@ -1,4 +1,7 @@
 #' Search for keywords in the dictionary (Enhanced Version)
+#' @description Search for keywords from UKB metadata files
+#' 
+#' @author Xu Jun <xujun05@pku.edu.cn>
 #'
 #' @param keyword A character vector or string to search (e.g., "BMI" or c("BMI", "Age")).
 #'                Matches ANY column (Description, ID, Levels, etc.).

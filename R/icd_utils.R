@@ -1,7 +1,8 @@
 #' Define Disease by ICD-10
 #'
 #' Takes ICD prefixes as input and automatically identifies diagnosed patients from the main and secondary diagnosis columns (f.41270).
-#'
+#' @author Xu Jun <xujun05@pku.edu.cn>
+#' 
 #' @param df Loaded data frame (must contain f.41270 series columns).
 #' @param icd_codes Character vector, e.g., c("I20", "I25").
 #' @param strict Logical. TRUE = exact match, FALSE = prefix match (default).
