@@ -2,9 +2,6 @@
 #'
 #' @description
 #' Rename columns in a dataset using a UKB dictionary. 
-#' It supports two modes of matching:
-#' 1. **Field ID Matching**: Matches columns like "p30600_i0" to FieldID "30600".
-#' 2. **Name Matching** (Olink style): Matches columns like "il6" to Name "il6".
 #' 
 #' For Olink data, it extracts the short protein name from the Description 
 #' (the part before the first semicolon).
@@ -25,134 +22,136 @@ xg_rename <- function(data, dict = ukb_dict_mini) {
   valid_dict <- dict
   if (is.null(valid_dict$Description)) stop("Dictionary must have a 'Description' column.")
   
-  # --- HELPER: Logic to extract the "clean" name from Description
+  # --- LOGIC: Extract "clean" name from Description
   get_clean_desc <- function(desc_vec) {
     sapply(desc_vec, function(x) {
       if (is.na(x) || x == "") return(NA)
-      # Priority: Olink style (before semicolon)
+      # 1. Olink style: Extract part before first semicolon
       if (grepl(";", x)) {
-        clean_val <- trimws(sub(";.*", "", x))
+        val <- trimws(sub(";.*", "", x))
       } else {
-        clean_val <- x
+        val <- x
       }
-      # Clean special chars
-      clean_val <- gsub("[^A-Za-z0-9]", "_", clean_val)
-      clean_val <- gsub("_+", "_", clean_val)
-      clean_val <- gsub("_$", "", clean_val)
-      clean_val <- gsub("^_", "", clean_val)
-      return(clean_val)
+      # 2. Clean special chars (replace spaces/symbols with _)
+      val <- gsub("[^A-Za-z0-9]", "_", val)
+      # 3. Handle strict Olink/Gene name convention (usually ALL CAPS for Description)
+      # But user wants whatever is before ";". Usually "IL6;..." -> "IL6"
+      return(val)
     }, USE.NAMES = FALSE)
   }
   
   valid_dict$CleanDesc <- get_clean_desc(valid_dict$Description)
   
-  # Fill missing descriptions
-  missing_desc <- is.na(valid_dict$CleanDesc) | valid_dict$CleanDesc == "" | valid_dict$CleanDesc == "NA"
-  if ("Name" %in% names(valid_dict)) {
-    valid_dict$CleanDesc[missing_desc] <- valid_dict$Name[missing_desc]
-  } else if ("FieldID" %in% names(valid_dict)) {
-    valid_dict$CleanDesc[missing_desc] <- paste0("Field_", valid_dict$FieldID[missing_desc])
-  }
+  # --- BUILD LOOKUP TABLE (The "Map") ---
+  # Key: Normalized Name (Lower case, trimmed) -> Value: Clean Description
   
-  # Build Lookup Tables (Force lowercase keys for robust matching)
-  name_to_desc <- NULL
+  lookup_map <- list()
+  
+  # 1. Add 'Name' based mapping (Priority for Olink)
   if ("Name" %in% names(valid_dict)) {
-    tmp <- valid_dict[!is.na(valid_dict$Name) & valid_dict$Name != "", ]
-    # Key: Lowercase Name, Value: Clean Description
-    if (nrow(tmp) > 0) {
-      name_to_desc <- setNames(tmp$CleanDesc, tolower(trimws(tmp$Name)))
+    # Extract valid names
+    tmp_name <- valid_dict[!is.na(valid_dict$Name) & valid_dict$Name != "", ]
+    if (nrow(tmp_name) > 0) {
+      # Normalize keys: lowercase + trimmed
+      keys <- tolower(trimws(tmp_name$Name))
+      vals <- tmp_name$CleanDesc
+      # Assign to map (handling duplicates by keeping first found)
+      lookup_map[keys] <- vals 
     }
   }
   
-  id_to_desc <- NULL
+  # 2. Add 'FieldID' based mapping (Secondary)
   if ("FieldID" %in% names(valid_dict)) {
-    tmp <- valid_dict[!is.na(valid_dict$FieldID), ]
-    if (nrow(tmp) > 0) {
-      id_to_desc <- setNames(tmp$CleanDesc, as.character(tmp$FieldID))
+    tmp_id <- valid_dict[!is.na(valid_dict$FieldID), ]
+    if (nrow(tmp_id) > 0) {
+      keys <- as.character(tmp_id$FieldID) # ID keys stay numeric string
+      vals <- tmp_id$CleanDesc
+      lookup_map[keys] <- vals
     }
   }
   
-  # --- TARGET NAME RESOLUTION ---
+  # --- RENAME PROCESS ---
   current_names <- names(data)
   
-  # Calculate target names for all columns
-  target_bases <- sapply(current_names, function(col_name) {
-    col_lower <- tolower(col_name) # Work with lowercase inputs
-    
-    # Skip special ID columns
+  # Define matching function for a single column
+  get_new_name <- function(col_name) {
+    # 1. Handle special ID columns
+    col_lower <- tolower(trimws(col_name))
     if (col_lower %in% c("eid", "subject_id", "id")) return("Subject_ID")
     
-    # Strategy A: Name Match (Priority)
-    if (!is.null(name_to_desc) && col_lower %in% names(name_to_desc)) {
-      return(name_to_desc[[col_lower]])
+    # 2. Strategy A: Direct Name Match (e.g. "a1bg" -> "A1BG")
+    if (col_lower %in% names(lookup_map)) {
+      return(lookup_map[[col_lower]])
     }
     
-    # Strategy B: Field ID Match
-    # Extract first numeric sequence
+    # 3. Strategy B: Remove common suffixes and try again
+    # Try removing "_i0", ".0.0", etc.
+    # Ex: "a1bg_i0" -> "a1bg" -> Lookup
+    clean_base <- col_lower
+    # Remove _i0, _i1...
+    clean_base <- sub("_i\\d+.*$", "", clean_base)
+    # Remove .0.0 pattern
+    clean_base <- sub("\\.\\d+\\.\\d+$", "", clean_base)
+    
+    if (clean_base != col_lower && clean_base %in% names(lookup_map)) {
+      return(lookup_map[[clean_base]])
+    }
+    
+    # 4. Strategy C: Field ID Extraction
     col_id <- stringr::str_extract(col_name, "\\d+")
-    if (!is.na(col_id) && !is.null(id_to_desc) && col_id %in% names(id_to_desc)) {
-      return(id_to_desc[[col_id]])
+    if (!is.na(col_id) && col_id %in% names(lookup_map)) {
+      return(lookup_map[[col_id]])
     }
     
-    return(NA_character_) # Explicitly return NA character
-  })
+    return(NA_character_)
+  }
   
-  # --- CHECK FOR ZERO MATCHES (Fixes the "nothing to tabulate" error) ---
+  # Calculate all targets
+  target_bases <- sapply(current_names, get_new_name)
+  
+  # --- CHECK IF NOTHING MATCHED ---
   valid_targets <- target_bases[!is.na(target_bases) & target_bases != "Subject_ID"]
   
   if (length(valid_targets) == 0) {
-    message("Warning: xg_rename could not match any columns using the provided dictionary.")
-    message("Top 5 columns in data: ", paste(head(current_names, 5), collapse=", "))
-    if (!is.null(name_to_desc)) {
-      message("Sample dictionary Names: ", paste(head(names(name_to_desc), 5), collapse=", "))
+    message("Warning: No columns matched the dictionary.")
+    # DEBUG INFO:
+    message("DEBUG: Data cols (first 3 pure): ", paste(shQuote(head(names(data),3)), collapse=", "))
+    if (length(lookup_map) > 0) {
+      message("DEBUG: Dictionary Keys (first 3): ", paste(shQuote(head(names(lookup_map),3)), collapse=", "))
     }
-    message("Returning original data unchanged.")
     return(data)
   }
   
-  # Count occurrences to handle duplicates
-  real_data_desc_counts <- table(valid_targets)
+  # --- HANDLE DUPLICATES (INSTANCE SUFFIXES) ---
+  target_counts <- table(target_bases[!is.na(target_bases)])
   
-  # --- RENAME EXECUTION ---
-  new_names <- sapply(seq_along(current_names), function(i) {
-    col_name <- current_names[i]
-    base_desc <- target_bases[i]
+  final_names <- sapply(seq_along(current_names), function(i) {
+    old_name <- current_names[i]
+    new_base <- target_bases[i]
     
-    # 1. No match or Special
-    if (is.na(base_desc)) return(col_name)
-    if (base_desc == "Subject_ID") return("Subject_ID")
+    if (is.na(new_base)) return(old_name) # Keep original if no match
+    if (new_base == "Subject_ID") return("Subject_ID")
     
-    # 2. Check collisions
-    count <- real_data_desc_counts[[base_desc]]
-    
-    if (!is.na(count) && count > 1) {
-      # COLLISION: Need suffix
-      if (grepl("_i\\d+", col_name)) {
-        suffix <- stringr::str_extract(col_name, "_i\\d+.*$")
+    # Check if we need to append suffix (Collision detection)
+    if (target_counts[[new_base]] > 1) {
+      # Try to preserve instance info from old name
+      if (grepl("_i\\d+", old_name)) {
+        suffix <- stringr::str_extract(old_name, "_i\\d+")
+      } else if (grepl("\\.\\d+\\.\\d+", old_name)) {
+        inst <- stringr::str_extract(old_name, "(?<=\\.)\\d+(?=\\.)")
+        suffix <- paste0("_i", inst)
       } else {
-        col_id <- stringr::str_extract(col_name, "\\d+")
-        inst_match <- stringr::str_match(col_name, paste0("\\.", col_id, "\\.(\\d+)"))
-        if (!is.na(inst_match[1,2])) {
-          suffix <- paste0("_i", inst_match[1,2])
-        } else {
-          suffix <- paste0("_", col_name) # Fallback
-        }
+        suffix <- paste0("_", old_name) # Fallback
       }
-      return(paste0(base_desc, suffix))
+      return(paste0(new_base, suffix))
     } else {
-      # UNIQUE
-      return(base_desc)
+      return(new_base)
     }
   })
   
-  # 4. Final Safety Check
+  # Apply changes
   dt <- data.table::copy(data)
+  data.table::setnames(dt, current_names, final_names)
   
-  if (any(duplicated(new_names))) {
-    warning("xg_rename: Duplicate names generated. Appending unique index.")
-    new_names <- make.unique(new_names, sep = "_dup")
-  }
-  
-  data.table::setnames(dt, current_names, new_names)
   return(dt)
 }

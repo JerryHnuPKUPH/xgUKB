@@ -17,9 +17,6 @@ The data with renamed columns.
 }
 \description{
 Rename columns in a dataset using a UKB dictionary. 
-It supports two modes of matching:
-1. **Field ID Matching**: Matches columns like "p30600_i0" to FieldID "30600".
-2. **Name Matching** (Olink style): Matches columns like "il6" to Name "il6".
 
 For Olink data, it extracts the short protein name from the Description 
 (the part before the first semicolon).
